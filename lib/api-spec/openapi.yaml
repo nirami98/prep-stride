@@ -1,0 +1,514 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: interviews
+    description: Interview session management
+  - name: questions
+    description: Interview questions
+  - name: answers
+    description: Answer submission
+  - name: feedback
+    description: AI-generated feedback
+  - name: analytics
+    description: User analytics and history
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /interviews:
+    get:
+      operationId: listInterviews
+      tags: [interviews]
+      summary: List user interview sessions
+      responses:
+        "200":
+          description: List of interview sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InterviewSession"
+    post:
+      operationId: createInterview
+      tags: [interviews]
+      summary: Start a new interview session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInterviewBody"
+      responses:
+        "201":
+          description: Created interview session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSession"
+
+  /interviews/{id}:
+    get:
+      operationId: getInterview
+      tags: [interviews]
+      summary: Get a specific interview session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Interview session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSessionDetail"
+    patch:
+      operationId: endInterview
+      tags: [interviews]
+      summary: End an interview session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated interview session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSession"
+
+  /interviews/{id}/next-question:
+    get:
+      operationId: getNextQuestion
+      tags: [questions]
+      summary: Get next question for a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Next question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "204":
+          description: No more questions available
+
+  /interviews/{id}/answers:
+    post:
+      operationId: submitAnswer
+      tags: [answers]
+      summary: Submit an answer for a question in a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAnswerBody"
+      responses:
+        "201":
+          description: Saved answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Answer"
+
+  /interviews/{id}/feedback:
+    get:
+      operationId: getFeedback
+      tags: [feedback]
+      summary: Get feedback for an interview session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Feedback for session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+    post:
+      operationId: generateFeedback
+      tags: [feedback]
+      summary: Generate AI feedback for a completed interview session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Generated feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+
+  /interviews/{id}/transcribe:
+    post:
+      operationId: transcribeAnswer
+      tags: [answers]
+      summary: Transcribe an audio answer using AI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscribeAnswerBody"
+      responses:
+        "200":
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionResult"
+
+  /analytics/overview:
+    get:
+      operationId: getAnalyticsOverview
+      tags: [analytics]
+      summary: Get user's analytics overview
+      responses:
+        "200":
+          description: Analytics overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsOverview"
+
+  /analytics/history:
+    get:
+      operationId: getAnalyticsHistory
+      tags: [analytics]
+      summary: Get user's interview history with scores
+      responses:
+        "200":
+          description: Interview history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoryItem"
+
+  /questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List all available questions
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    InterviewSession:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        jobRole:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        status:
+          type: string
+          enum: [active, completed]
+        questionCount:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        score:
+          type: number
+          nullable: true
+      required:
+        - id
+        - userId
+        - jobRole
+        - difficulty
+        - status
+        - questionCount
+        - startedAt
+
+    InterviewSessionDetail:
+      allOf:
+        - $ref: "#/components/schemas/InterviewSession"
+        - type: object
+          properties:
+            answers:
+              type: array
+              items:
+                $ref: "#/components/schemas/Answer"
+            feedback:
+              $ref: "#/components/schemas/Feedback"
+              nullable: true
+
+    CreateInterviewBody:
+      type: object
+      properties:
+        jobRole:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 10
+      required:
+        - jobRole
+        - difficulty
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+      required:
+        - id
+        - content
+        - category
+        - difficulty
+
+    Answer:
+      type: object
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        questionId:
+          type: string
+        question:
+          $ref: "#/components/schemas/Question"
+          nullable: true
+        response:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - sessionId
+        - questionId
+        - response
+        - createdAt
+
+    SubmitAnswerBody:
+      type: object
+      properties:
+        questionId:
+          type: string
+        response:
+          type: string
+      required:
+        - questionId
+        - response
+
+    TranscribeAnswerBody:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+        mimeType:
+          type: string
+      required:
+        - audioBase64
+        - mimeType
+
+    TranscriptionResult:
+      type: object
+      properties:
+        transcript:
+          type: string
+      required:
+        - transcript
+
+    Feedback:
+      type: object
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        strengths:
+          type: array
+          items:
+            type: string
+        weaknesses:
+          type: array
+          items:
+            type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - sessionId
+        - score
+        - strengths
+        - weaknesses
+        - suggestions
+        - summary
+        - createdAt
+
+    AnalyticsOverview:
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+        completedSessions:
+          type: integer
+        averageScore:
+          type: number
+          nullable: true
+        bestScore:
+          type: number
+          nullable: true
+        topCategory:
+          type: string
+          nullable: true
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryItem"
+        scoresByDifficulty:
+          type: object
+          properties:
+            easy:
+              type: number
+              nullable: true
+            medium:
+              type: number
+              nullable: true
+            hard:
+              type: number
+              nullable: true
+      required:
+        - totalSessions
+        - completedSessions
+        - recentActivity
+        - scoresByDifficulty
+
+    HistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        jobRole:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        score:
+          type: number
+          nullable: true
+        questionCount:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed]
+      required:
+        - id
+        - jobRole
+        - difficulty
+        - questionCount
+        - startedAt
+        - status
