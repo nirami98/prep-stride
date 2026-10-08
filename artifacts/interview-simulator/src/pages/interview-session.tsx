@@ -69,12 +69,14 @@ export default function InterviewSessionPage({ id }: { id: string }) {
     if (!session || session.status !== 'active') return;
     const seconds = DURATION_BY_DIFFICULTY[session.difficulty as keyof typeof DURATION_BY_DIFFICULTY] ?? 90;
     setTimeLeft(seconds);
-  }, [session?.id, session?.difficulty, session?.status]);
+  }, [session?.id, session?.difficulty, session?.status, nextQuestion?.id]);
 
   useEffect(() => {
     if (timeLeft == null || isFinishing || !session || session.status !== 'active') return;
     if (timeLeft <= 0) {
-      handleFinishSession();
+      if (nextQuestion && !submitAnswer.isPending) {
+        handleSubmitAnswer("[No answer submitted before time expired]");
+      }
       return;
     }
     timerRef.current = window.setTimeout(() => setTimeLeft((current) => (current == null ? current : current - 1)), 1000);
@@ -158,10 +160,10 @@ export default function InterviewSessionPage({ id }: { id: string }) {
     reader.readAsDataURL(blob);
   };
 
-  const handleSubmitAnswer = () => {
-    if (!nextQuestion || !response.trim()) return;
+  function handleSubmitAnswer(answerText = response) {
+    if (!nextQuestion || !answerText.trim()) return;
 
-    submitAnswer.mutate({ id, data: { questionId: nextQuestion.id, response } }, {
+    submitAnswer.mutate({ id, data: { questionId: nextQuestion.id, response: answerText } }, {
       onSuccess: () => {
         setResponse("");
         queryClient.invalidateQueries({ queryKey: getGetInterviewQueryKey(id) });
@@ -176,7 +178,7 @@ export default function InterviewSessionPage({ id }: { id: string }) {
         });
       }
     });
-  };
+  }
 
   const preventPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     event.preventDefault();
@@ -359,7 +361,7 @@ export default function InterviewSessionPage({ id }: { id: string }) {
                 </div>
 
                 <Button 
-                  onClick={handleSubmitAnswer}
+                  onClick={() => handleSubmitAnswer()}
                   disabled={!response.trim() || isRecording || transcribeMutation.isPending || submitAnswer.isPending}
                   className="w-full sm:w-auto gap-2 font-semibold px-8 cursor-pointer"
                   size="lg"

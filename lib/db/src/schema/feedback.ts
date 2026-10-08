@@ -15,6 +15,9 @@ export const feedbackTable = pgTable("feedback", {
   strengths: text("strengths").notNull(),
   weaknesses: text("weaknesses").notNull(),
   suggestions: text("suggestions").notNull(),
+  categoryScores: text("category_scores").notNull().default("[]"),
+  answerBreakdown: text("answer_breakdown").notNull().default("[]"),
+  methodology: text("methodology").notNull().default(""),
   summary: text("summary").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

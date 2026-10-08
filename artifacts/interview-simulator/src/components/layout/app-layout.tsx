@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth, UserButton } from "@clerk/react";
-import { LogOut, LayoutDashboard, PlayCircle, GitCompare, Menu } from "lucide-react";
+import { LogOut, LayoutDashboard, PlayCircle, GitCompare, Menu, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -13,6 +13,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "New Interview", href: "/interview/start", icon: PlayCircle },
+    { name: "Study Plans", href: "/plans", icon: Map },
     { name: "Compare", href: "/compare", icon: GitCompare },
   ];
 
@@ -23,7 +24,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer">
               <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Logo" className="w-8 h-8" />
-              <span className="font-display font-bold text-xl tracking-tight">Simulator</span>
+              <span className="font-display font-bold text-xl tracking-tight">PrepStride</span>
             </Link>
             <nav className="hidden md:flex items-center gap-1">
               {navigation.map((item) => {

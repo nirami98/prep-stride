@@ -7,6 +7,7 @@ import { Loader2, ArrowLeft, RefreshCw, AlertCircle, CheckCircle2, TrendingUp, H
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from "date-fns";
+import { Progress } from "@/components/ui/progress";
 
 export default function InterviewResultPage({ id }: { id: string }) {
   const [, setLocation] = useLocation();
@@ -172,6 +173,23 @@ export default function InterviewResultPage({ id }: { id: string }) {
           </Card>
         </div>
 
+        <Card className="mb-8 shadow-sm">
+          <CardHeader>
+            <CardTitle>Competency scores</CardTitle>
+            <CardDescription>{feedback.methodology}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {feedback.categoryScores.map((category) => (
+              <div key={category.category} className="rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4 text-sm font-medium">
+                  <span>{category.category}</span><span>{Math.round(category.score)}/100</span>
+                </div>
+                <Progress className="mt-3 h-2" value={category.score} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
         <Card className="shadow-sm mb-12 bg-secondary/30 border-dashed">
           <CardHeader>
             <CardTitle>Actionable Suggestions</CardTitle>
@@ -204,6 +222,16 @@ export default function InterviewResultPage({ id }: { id: string }) {
                   </AccordionTrigger>
                   <AccordionContent className="px-6 pb-6 pt-2">
                     <div className="pl-10">
+                      {(() => {
+                        const assessment = feedback.answerBreakdown.find((item) => item.questionId === answer.questionId);
+                        return assessment ? <div className="mb-5 space-y-4 rounded-xl border bg-background p-5">
+                          <div className="flex items-center justify-between"><strong>Answer assessment</strong><span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">{Math.round(assessment.score)}/100</span></div>
+                          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">{Object.entries(assessment.dimensionScores).map(([name, score]) => <div key={name} className="rounded bg-muted p-2 text-center"><div className="capitalize text-muted-foreground">{name}</div><strong>{Math.round(score)}</strong></div>)}</div>
+                          {!!assessment.evidence.length && <div><div className="text-sm font-semibold text-green-700">Evidence credited</div><ul className="list-disc pl-5 text-sm">{assessment.evidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+                          {!!assessment.missedSignals.length && <div><div className="text-sm font-semibold text-amber-700">Missing or weak signals</div><ul className="list-disc pl-5 text-sm">{assessment.missedSignals.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+                          <div><div className="text-sm font-semibold">A stronger answer</div><p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{assessment.improvedAnswer}</p></div>
+                        </div> : null;
+                      })()}
                       <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                         <HelpCircle className="w-3.5 h-3.5" /> Your Response
                       </div>

@@ -12,14 +12,14 @@ tags:
     description: Health operations
   - name: interviews
     description: Interview session management
-  - name: questions
-    description: Interview questions
   - name: answers
     description: Answer submission
   - name: feedback
     description: AI-generated feedback
   - name: analytics
     description: User analytics and history
+  - name: plans
+    description: Personalized interview study plans
 paths:
   /healthz:
     get:
@@ -237,25 +237,55 @@ paths:
                 items:
                   $ref: "#/components/schemas/HistoryItem"
 
-  /questions:
+  /plans:
     get:
-      operationId: listQuestions
-      tags: [questions]
-      summary: List all available questions
-      parameters:
-        - name: category
-          in: query
-          schema:
-            type: string
+      operationId: listInterviewPlans
+      tags: [plans]
+      summary: List the user's interview study plans
       responses:
         "200":
-          description: List of questions
+          description: Interview plans
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Question"
+                  $ref: "#/components/schemas/InterviewPlan"
+    post:
+      operationId: createInterviewPlan
+      tags: [plans]
+      summary: Generate a personalized interview study plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanRequestBody"
+      responses:
+        "201":
+          description: Generated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewPlan"
+
+  /plans/{id}:
+    get:
+      operationId: getInterviewPlan
+      tags: [plans]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Interview plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewPlan"
 
 components:
   schemas:
@@ -276,12 +306,23 @@ components:
           type: string
         jobRole:
           type: string
+        companyName:
+          type: string
+          nullable: true
+        experienceLevel:
+          type: string
+          enum: [entry, mid, senior, lead]
+        interviewRounds:
+          type: integer
+        roundDetails:
+          type: string
+          nullable: true
         difficulty:
           type: string
           enum: [easy, medium, hard]
         status:
           type: string
-          enum: [active, completed]
+          enum: [generating, active, completed, failed]
         questionCount:
           type: integer
         startedAt:
@@ -298,6 +339,8 @@ components:
         - id
         - userId
         - jobRole
+        - experienceLevel
+        - interviewRounds
         - difficulty
         - status
         - questionCount
@@ -321,16 +364,56 @@ components:
       properties:
         jobRole:
           type: string
+          minLength: 2
+          maxLength: 120
+        companyName:
+          type: string
+          maxLength: 120
         difficulty:
           type: string
           enum: [easy, medium, hard]
+        experienceLevel:
+          type: string
+          enum: [entry, mid, senior, lead]
         questionCount:
           type: integer
           minimum: 1
           maximum: 10
+        interviewRounds:
+          type: integer
+          minimum: 1
+          maximum: 8
+        roundDetails:
+          type: string
+          maxLength: 5000
+        jobDescription:
+          type: string
+          maxLength: 30000
+        jobDescriptionFile:
+          $ref: "#/components/schemas/DocumentUpload"
+        resumeFile:
+          $ref: "#/components/schemas/DocumentUpload"
       required:
         - jobRole
         - difficulty
+        - experienceLevel
+        - interviewRounds
+
+    PlanRequestBody:
+      allOf:
+        - $ref: "#/components/schemas/CreateInterviewBody"
+
+    DocumentUpload:
+      type: object
+      properties:
+        filename:
+          type: string
+          maxLength: 255
+        mimeType:
+          type: string
+        base64:
+          type: string
+      required: [filename, mimeType, base64]
 
     Question:
       type: object
@@ -341,6 +424,10 @@ components:
           type: string
         category:
           type: string
+        roundName:
+          type: string
+        sequence:
+          type: integer
         difficulty:
           type: string
           enum: [easy, medium, hard]
@@ -348,6 +435,8 @@ components:
         - id
         - content
         - category
+        - roundName
+        - sequence
         - difficulty
 
     Answer:
@@ -364,6 +453,8 @@ components:
           nullable: true
         response:
           type: string
+          minLength: 1
+          maxLength: 12000
         createdAt:
           type: string
           format: date-time
@@ -390,6 +481,7 @@ components:
       properties:
         audioBase64:
           type: string
+          maxLength: 14000000
         mimeType:
           type: string
       required:
@@ -427,6 +519,16 @@ components:
           type: array
           items:
             type: string
+        categoryScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryScore"
+        answerBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerScore"
+        methodology:
+          type: string
         summary:
           type: string
         createdAt:
@@ -439,7 +541,127 @@ components:
         - strengths
         - weaknesses
         - suggestions
+        - categoryScores
+        - answerBreakdown
+        - methodology
         - summary
+        - createdAt
+
+    CategoryScore:
+      type: object
+      properties:
+        category:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+      required: [category, score]
+
+    AnswerScore:
+      type: object
+      properties:
+        questionId:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        evidence:
+          type: array
+          items:
+            type: string
+        missedSignals:
+          type: array
+          items:
+            type: string
+        improvedAnswer:
+          type: string
+        dimensionScores:
+          $ref: "#/components/schemas/DimensionScores"
+      required:
+        - questionId
+        - score
+        - evidence
+        - missedSignals
+        - improvedAnswer
+        - dimensionScores
+
+    DimensionScores:
+      type: object
+      properties:
+        relevance: { type: number, minimum: 0, maximum: 100 }
+        accuracy: { type: number, minimum: 0, maximum: 100 }
+        depth: { type: number, minimum: 0, maximum: 100 }
+        structure: { type: number, minimum: 0, maximum: 100 }
+        communication: { type: number, minimum: 0, maximum: 100 }
+      required: [relevance, accuracy, depth, structure, communication]
+
+    PlanRound:
+      type: object
+      properties:
+        name: { type: string }
+        purpose: { type: string }
+        focusAreas:
+          type: array
+          items: { type: string }
+        estimatedDays: { type: integer }
+      required: [name, purpose, focusAreas, estimatedDays]
+
+    PlanDay:
+      type: object
+      properties:
+        day: { type: integer }
+        title: { type: string }
+        tasks:
+          type: array
+          items: { type: string }
+      required: [day, title, tasks]
+
+    PlanSource:
+      type: object
+      properties:
+        title: { type: string }
+        url: { type: string }
+      required: [title, url]
+
+    InterviewPlan:
+      type: object
+      properties:
+        id: { type: string }
+        companyName: { type: string, nullable: true }
+        jobRole: { type: string }
+        experienceLevel: { type: string }
+        interviewRounds: { type: integer }
+        candidateSummary: { type: string }
+        roleSummary: { type: string }
+        researchSummary: { type: string }
+        rounds:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanRound"
+        schedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanDay"
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSource"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - jobRole
+        - experienceLevel
+        - interviewRounds
+        - candidateSummary
+        - roleSummary
+        - researchSummary
+        - rounds
+        - schedule
+        - sources
         - createdAt
 
     AnalyticsOverview:
@@ -504,7 +726,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: [active, completed]
+          enum: [generating, active, completed, failed]
       required:
         - id
         - jobRole

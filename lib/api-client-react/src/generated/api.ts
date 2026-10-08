@@ -23,9 +23,10 @@ import type {
   Feedback,
   HealthStatus,
   HistoryItem,
+  InterviewPlan,
   InterviewSession,
   InterviewSessionDetail,
-  ListQuestionsParams,
+  PlanRequestBody,
   Question,
   SubmitAnswerBody,
   TranscribeAnswerBody,
@@ -1031,46 +1032,192 @@ export function useGetAnalyticsHistory<
 }
 
 /**
- * @summary List all available questions
+ * @summary List the user's interview study plans
  */
-export const getListQuestionsUrl = (params?: ListQuestionsParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? "null" : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/api/questions?${stringifiedParams}`
-    : `/api/questions`;
+export const getListInterviewPlansUrl = () => {
+  return `/api/plans`;
 };
 
-export const listQuestions = async (
-  params?: ListQuestionsParams,
+export const listInterviewPlans = async (
   options?: RequestInit,
-): Promise<Question[]> => {
-  return customFetch<Question[]>(getListQuestionsUrl(params), {
+): Promise<InterviewPlan[]> => {
+  return customFetch<InterviewPlan[]>(getListInterviewPlansUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListQuestionsQueryKey = (params?: ListQuestionsParams) => {
-  return [`/api/questions`, ...(params ? [params] : [])] as const;
+export const getListInterviewPlansQueryKey = () => {
+  return [`/api/plans`] as const;
 };
 
-export const getListQuestionsQueryOptions = <
-  TData = Awaited<ReturnType<typeof listQuestions>>,
+export const getListInterviewPlansQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInterviewPlans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listInterviewPlans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListInterviewPlansQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listInterviewPlans>>
+  > = ({ signal }) => listInterviewPlans({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInterviewPlans>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListInterviewPlansQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listInterviewPlans>>
+>;
+export type ListInterviewPlansQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the user's interview study plans
+ */
+
+export function useListInterviewPlans<
+  TData = Awaited<ReturnType<typeof listInterviewPlans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listInterviewPlans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListInterviewPlansQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Generate a personalized interview study plan
+ */
+export const getCreateInterviewPlanUrl = () => {
+  return `/api/plans`;
+};
+
+export const createInterviewPlan = async (
+  planRequestBody: PlanRequestBody,
+  options?: RequestInit,
+): Promise<InterviewPlan> => {
+  return customFetch<InterviewPlan>(getCreateInterviewPlanUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(planRequestBody),
+  });
+};
+
+export const getCreateInterviewPlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInterviewPlan>>,
+    TError,
+    { data: BodyType<PlanRequestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createInterviewPlan>>,
+  TError,
+  { data: BodyType<PlanRequestBody> },
+  TContext
+> => {
+  const mutationKey = ["createInterviewPlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createInterviewPlan>>,
+    { data: BodyType<PlanRequestBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createInterviewPlan(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateInterviewPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createInterviewPlan>>
+>;
+export type CreateInterviewPlanMutationBody = BodyType<PlanRequestBody>;
+export type CreateInterviewPlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate a personalized interview study plan
+ */
+export const useCreateInterviewPlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInterviewPlan>>,
+    TError,
+    { data: BodyType<PlanRequestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createInterviewPlan>>,
+  TError,
+  { data: BodyType<PlanRequestBody> },
+  TContext
+> => {
+  return useMutation(getCreateInterviewPlanMutationOptions(options));
+};
+
+export const getGetInterviewPlanUrl = (id: string) => {
+  return `/api/plans/${id}`;
+};
+
+export const getInterviewPlan = async (
+  id: string,
+  options?: RequestInit,
+): Promise<InterviewPlan> => {
+  return customFetch<InterviewPlan>(getGetInterviewPlanUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInterviewPlanQueryKey = (id: string) => {
+  return [`/api/plans/${id}`] as const;
+};
+
+export const getGetInterviewPlanQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInterviewPlan>>,
   TError = ErrorType<unknown>,
 >(
-  params?: ListQuestionsParams,
+  id: string,
   options?: {
     query?: UseQueryOptions<
-      Awaited<ReturnType<typeof listQuestions>>,
+      Awaited<ReturnType<typeof getInterviewPlan>>,
       TError,
       TData
     >;
@@ -1079,43 +1226,44 @@ export const getListQuestionsQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListQuestionsQueryKey(params);
+  const queryKey = queryOptions?.queryKey ?? getGetInterviewPlanQueryKey(id);
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof listQuestions>>> = ({
-    signal,
-  }) => listQuestions(params, { signal, ...requestOptions });
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getInterviewPlan>>
+  > = ({ signal }) => getInterviewPlan(id, { signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listQuestions>>,
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInterviewPlan>>,
     TError,
     TData
   > & { queryKey: QueryKey };
 };
 
-export type ListQuestionsQueryResult = NonNullable<
-  Awaited<ReturnType<typeof listQuestions>>
+export type GetInterviewPlanQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInterviewPlan>>
 >;
-export type ListQuestionsQueryError = ErrorType<unknown>;
+export type GetInterviewPlanQueryError = ErrorType<unknown>;
 
-/**
- * @summary List all available questions
- */
-
-export function useListQuestions<
-  TData = Awaited<ReturnType<typeof listQuestions>>,
+export function useGetInterviewPlan<
+  TData = Awaited<ReturnType<typeof getInterviewPlan>>,
   TError = ErrorType<unknown>,
 >(
-  params?: ListQuestionsParams,
+  id: string,
   options?: {
     query?: UseQueryOptions<
-      Awaited<ReturnType<typeof listQuestions>>,
+      Awaited<ReturnType<typeof getInterviewPlan>>,
       TError,
       TData
     >;
     request?: SecondParameter<typeof customFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListQuestionsQueryOptions(params, options);
+  const queryOptions = getGetInterviewPlanQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

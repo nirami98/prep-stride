@@ -16,8 +16,10 @@ export const difficultyEnum = pgEnum("difficulty", [
 ]);
 
 export const sessionStatusEnum = pgEnum("session_status", [
+  "generating",
   "active",
   "completed",
+  "failed",
 ]);
 
 export const interviewSessionsTable = pgTable("interview_sessions", {
@@ -26,6 +28,12 @@ export const interviewSessionsTable = pgTable("interview_sessions", {
     .$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull(),
   jobRole: text("job_role").notNull(),
+  companyName: text("company_name"),
+  experienceLevel: text("experience_level").notNull().default("mid"),
+  jobDescription: text("job_description"),
+  resumeSummary: text("resume_summary"),
+  interviewRounds: integer("interview_rounds").notNull().default(1),
+  roundDetails: text("round_details"),
   difficulty: difficultyEnum("difficulty").notNull().default("medium"),
   status: sessionStatusEnum("status").notNull().default("active"),
   questionCount: integer("question_count").notNull().default(5),

@@ -21,8 +21,12 @@ export const ListInterviewsResponseItem = zod.object({
   id: zod.string(),
   userId: zod.string(),
   jobRole: zod.string(),
+  companyName: zod.string().nullish(),
+  experienceLevel: zod.enum(["entry", "mid", "senior", "lead"]),
+  interviewRounds: zod.number(),
+  roundDetails: zod.string().nullish(),
   difficulty: zod.enum(["easy", "medium", "hard"]),
-  status: zod.enum(["active", "completed"]),
+  status: zod.enum(["generating", "active", "completed", "failed"]),
   questionCount: zod.number(),
   startedAt: zod.coerce.date(),
   endedAt: zod.coerce.date().nullish(),
@@ -33,15 +37,60 @@ export const ListInterviewsResponse = zod.array(ListInterviewsResponseItem);
 /**
  * @summary Start a new interview session
  */
+export const createInterviewBodyJobRoleMin = 2;
+export const createInterviewBodyJobRoleMax = 120;
+
+export const createInterviewBodyCompanyNameMax = 120;
+
 export const createInterviewBodyQuestionCountMax = 10;
 
+export const createInterviewBodyInterviewRoundsMax = 8;
+
+export const createInterviewBodyRoundDetailsMax = 5000;
+
+export const createInterviewBodyJobDescriptionMax = 30000;
+
+export const createInterviewBodyJobDescriptionFileFilenameMax = 255;
+
+export const createInterviewBodyResumeFileFilenameMax = 255;
+
 export const CreateInterviewBody = zod.object({
-  jobRole: zod.string(),
+  jobRole: zod
+    .string()
+    .min(createInterviewBodyJobRoleMin)
+    .max(createInterviewBodyJobRoleMax),
+  companyName: zod.string().max(createInterviewBodyCompanyNameMax).optional(),
   difficulty: zod.enum(["easy", "medium", "hard"]),
+  experienceLevel: zod.enum(["entry", "mid", "senior", "lead"]),
   questionCount: zod
     .number()
     .min(1)
     .max(createInterviewBodyQuestionCountMax)
+    .optional(),
+  interviewRounds: zod
+    .number()
+    .min(1)
+    .max(createInterviewBodyInterviewRoundsMax),
+  roundDetails: zod.string().max(createInterviewBodyRoundDetailsMax).optional(),
+  jobDescription: zod
+    .string()
+    .max(createInterviewBodyJobDescriptionMax)
+    .optional(),
+  jobDescriptionFile: zod
+    .object({
+      filename: zod
+        .string()
+        .max(createInterviewBodyJobDescriptionFileFilenameMax),
+      mimeType: zod.string(),
+      base64: zod.string(),
+    })
+    .optional(),
+  resumeFile: zod
+    .object({
+      filename: zod.string().max(createInterviewBodyResumeFileFilenameMax),
+      mimeType: zod.string(),
+      base64: zod.string(),
+    })
     .optional(),
 });
 
@@ -52,16 +101,43 @@ export const GetInterviewParams = zod.object({
   id: zod.coerce.string(),
 });
 
+export const getInterviewResponseTwoAnswersItemResponseMax = 12000;
+
 export const getInterviewResponseTwoFeedbackScoreMin = 0;
 export const getInterviewResponseTwoFeedbackScoreMax = 100;
+
+export const getInterviewResponseTwoFeedbackCategoryScoresItemScoreMin = 0;
+export const getInterviewResponseTwoFeedbackCategoryScoresItemScoreMax = 100;
+
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemScoreMin = 0;
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemScoreMax = 100;
+
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresRelevanceMin = 0;
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresRelevanceMax = 100;
+
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresAccuracyMin = 0;
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresAccuracyMax = 100;
+
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresDepthMin = 0;
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresDepthMax = 100;
+
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresStructureMin = 0;
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresStructureMax = 100;
+
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresCommunicationMin = 0;
+export const getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresCommunicationMax = 100;
 
 export const GetInterviewResponse = zod
   .object({
     id: zod.string(),
     userId: zod.string(),
     jobRole: zod.string(),
+    companyName: zod.string().nullish(),
+    experienceLevel: zod.enum(["entry", "mid", "senior", "lead"]),
+    interviewRounds: zod.number(),
+    roundDetails: zod.string().nullish(),
     difficulty: zod.enum(["easy", "medium", "hard"]),
-    status: zod.enum(["active", "completed"]),
+    status: zod.enum(["generating", "active", "completed", "failed"]),
     questionCount: zod.number(),
     startedAt: zod.coerce.date(),
     endedAt: zod.coerce.date().nullish(),
@@ -80,10 +156,15 @@ export const GetInterviewResponse = zod
                 id: zod.string(),
                 content: zod.string(),
                 category: zod.string(),
+                roundName: zod.string(),
+                sequence: zod.number(),
                 difficulty: zod.enum(["easy", "medium", "hard"]),
               })
               .nullish(),
-            response: zod.string(),
+            response: zod
+              .string()
+              .min(1)
+              .max(getInterviewResponseTwoAnswersItemResponseMax),
             createdAt: zod.coerce.date(),
           }),
         )
@@ -99,6 +180,72 @@ export const GetInterviewResponse = zod
           strengths: zod.array(zod.string()),
           weaknesses: zod.array(zod.string()),
           suggestions: zod.array(zod.string()),
+          categoryScores: zod.array(
+            zod.object({
+              category: zod.string(),
+              score: zod
+                .number()
+                .min(getInterviewResponseTwoFeedbackCategoryScoresItemScoreMin)
+                .max(getInterviewResponseTwoFeedbackCategoryScoresItemScoreMax),
+            }),
+          ),
+          answerBreakdown: zod.array(
+            zod.object({
+              questionId: zod.string(),
+              score: zod
+                .number()
+                .min(getInterviewResponseTwoFeedbackAnswerBreakdownItemScoreMin)
+                .max(
+                  getInterviewResponseTwoFeedbackAnswerBreakdownItemScoreMax,
+                ),
+              evidence: zod.array(zod.string()),
+              missedSignals: zod.array(zod.string()),
+              improvedAnswer: zod.string(),
+              dimensionScores: zod.object({
+                relevance: zod
+                  .number()
+                  .min(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresRelevanceMin,
+                  )
+                  .max(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresRelevanceMax,
+                  ),
+                accuracy: zod
+                  .number()
+                  .min(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresAccuracyMin,
+                  )
+                  .max(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresAccuracyMax,
+                  ),
+                depth: zod
+                  .number()
+                  .min(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresDepthMin,
+                  )
+                  .max(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresDepthMax,
+                  ),
+                structure: zod
+                  .number()
+                  .min(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresStructureMin,
+                  )
+                  .max(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresStructureMax,
+                  ),
+                communication: zod
+                  .number()
+                  .min(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresCommunicationMin,
+                  )
+                  .max(
+                    getInterviewResponseTwoFeedbackAnswerBreakdownItemDimensionScoresCommunicationMax,
+                  ),
+              }),
+            }),
+          ),
+          methodology: zod.string(),
           summary: zod.string(),
           createdAt: zod.coerce.date(),
         })
@@ -117,8 +264,12 @@ export const EndInterviewResponse = zod.object({
   id: zod.string(),
   userId: zod.string(),
   jobRole: zod.string(),
+  companyName: zod.string().nullish(),
+  experienceLevel: zod.enum(["entry", "mid", "senior", "lead"]),
+  interviewRounds: zod.number(),
+  roundDetails: zod.string().nullish(),
   difficulty: zod.enum(["easy", "medium", "hard"]),
-  status: zod.enum(["active", "completed"]),
+  status: zod.enum(["generating", "active", "completed", "failed"]),
   questionCount: zod.number(),
   startedAt: zod.coerce.date(),
   endedAt: zod.coerce.date().nullish(),
@@ -136,6 +287,8 @@ export const GetNextQuestionResponse = zod.object({
   id: zod.string(),
   content: zod.string(),
   category: zod.string(),
+  roundName: zod.string(),
+  sequence: zod.number(),
   difficulty: zod.enum(["easy", "medium", "hard"]),
 });
 
@@ -161,6 +314,27 @@ export const GetFeedbackParams = zod.object({
 export const getFeedbackResponseScoreMin = 0;
 export const getFeedbackResponseScoreMax = 100;
 
+export const getFeedbackResponseCategoryScoresItemScoreMin = 0;
+export const getFeedbackResponseCategoryScoresItemScoreMax = 100;
+
+export const getFeedbackResponseAnswerBreakdownItemScoreMin = 0;
+export const getFeedbackResponseAnswerBreakdownItemScoreMax = 100;
+
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMin = 0;
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMax = 100;
+
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMin = 0;
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMax = 100;
+
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMin = 0;
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMax = 100;
+
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMin = 0;
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMax = 100;
+
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMin = 0;
+export const getFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMax = 100;
+
 export const GetFeedbackResponse = zod.object({
   id: zod.string(),
   sessionId: zod.string(),
@@ -171,6 +345,64 @@ export const GetFeedbackResponse = zod.object({
   strengths: zod.array(zod.string()),
   weaknesses: zod.array(zod.string()),
   suggestions: zod.array(zod.string()),
+  categoryScores: zod.array(
+    zod.object({
+      category: zod.string(),
+      score: zod
+        .number()
+        .min(getFeedbackResponseCategoryScoresItemScoreMin)
+        .max(getFeedbackResponseCategoryScoresItemScoreMax),
+    }),
+  ),
+  answerBreakdown: zod.array(
+    zod.object({
+      questionId: zod.string(),
+      score: zod
+        .number()
+        .min(getFeedbackResponseAnswerBreakdownItemScoreMin)
+        .max(getFeedbackResponseAnswerBreakdownItemScoreMax),
+      evidence: zod.array(zod.string()),
+      missedSignals: zod.array(zod.string()),
+      improvedAnswer: zod.string(),
+      dimensionScores: zod.object({
+        relevance: zod
+          .number()
+          .min(
+            getFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMin,
+          )
+          .max(
+            getFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMax,
+          ),
+        accuracy: zod
+          .number()
+          .min(getFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMin)
+          .max(
+            getFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMax,
+          ),
+        depth: zod
+          .number()
+          .min(getFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMin)
+          .max(getFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMax),
+        structure: zod
+          .number()
+          .min(
+            getFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMin,
+          )
+          .max(
+            getFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMax,
+          ),
+        communication: zod
+          .number()
+          .min(
+            getFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMin,
+          )
+          .max(
+            getFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMax,
+          ),
+      }),
+    }),
+  ),
+  methodology: zod.string(),
   summary: zod.string(),
   createdAt: zod.coerce.date(),
 });
@@ -185,6 +417,27 @@ export const GenerateFeedbackParams = zod.object({
 export const generateFeedbackResponseScoreMin = 0;
 export const generateFeedbackResponseScoreMax = 100;
 
+export const generateFeedbackResponseCategoryScoresItemScoreMin = 0;
+export const generateFeedbackResponseCategoryScoresItemScoreMax = 100;
+
+export const generateFeedbackResponseAnswerBreakdownItemScoreMin = 0;
+export const generateFeedbackResponseAnswerBreakdownItemScoreMax = 100;
+
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMin = 0;
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMax = 100;
+
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMin = 0;
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMax = 100;
+
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMin = 0;
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMax = 100;
+
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMin = 0;
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMax = 100;
+
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMin = 0;
+export const generateFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMax = 100;
+
 export const GenerateFeedbackResponse = zod.object({
   id: zod.string(),
   sessionId: zod.string(),
@@ -195,6 +448,70 @@ export const GenerateFeedbackResponse = zod.object({
   strengths: zod.array(zod.string()),
   weaknesses: zod.array(zod.string()),
   suggestions: zod.array(zod.string()),
+  categoryScores: zod.array(
+    zod.object({
+      category: zod.string(),
+      score: zod
+        .number()
+        .min(generateFeedbackResponseCategoryScoresItemScoreMin)
+        .max(generateFeedbackResponseCategoryScoresItemScoreMax),
+    }),
+  ),
+  answerBreakdown: zod.array(
+    zod.object({
+      questionId: zod.string(),
+      score: zod
+        .number()
+        .min(generateFeedbackResponseAnswerBreakdownItemScoreMin)
+        .max(generateFeedbackResponseAnswerBreakdownItemScoreMax),
+      evidence: zod.array(zod.string()),
+      missedSignals: zod.array(zod.string()),
+      improvedAnswer: zod.string(),
+      dimensionScores: zod.object({
+        relevance: zod
+          .number()
+          .min(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMin,
+          )
+          .max(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresRelevanceMax,
+          ),
+        accuracy: zod
+          .number()
+          .min(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMin,
+          )
+          .max(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresAccuracyMax,
+          ),
+        depth: zod
+          .number()
+          .min(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMin,
+          )
+          .max(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresDepthMax,
+          ),
+        structure: zod
+          .number()
+          .min(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMin,
+          )
+          .max(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresStructureMax,
+          ),
+        communication: zod
+          .number()
+          .min(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMin,
+          )
+          .max(
+            generateFeedbackResponseAnswerBreakdownItemDimensionScoresCommunicationMax,
+          ),
+      }),
+    }),
+  ),
+  methodology: zod.string(),
   summary: zod.string(),
   createdAt: zod.coerce.date(),
 });
@@ -206,8 +523,10 @@ export const TranscribeAnswerParams = zod.object({
   id: zod.coerce.string(),
 });
 
+export const transcribeAnswerBodyAudioBase64Max = 14000000;
+
 export const TranscribeAnswerBody = zod.object({
-  audioBase64: zod.string(),
+  audioBase64: zod.string().max(transcribeAnswerBodyAudioBase64Max),
   mimeType: zod.string(),
 });
 
@@ -233,7 +552,7 @@ export const GetAnalyticsOverviewResponse = zod.object({
       questionCount: zod.number(),
       startedAt: zod.coerce.date(),
       endedAt: zod.coerce.date().nullish(),
-      status: zod.enum(["active", "completed"]),
+      status: zod.enum(["generating", "active", "completed", "failed"]),
     }),
   ),
   scoresByDifficulty: zod.object({
@@ -254,23 +573,152 @@ export const GetAnalyticsHistoryResponseItem = zod.object({
   questionCount: zod.number(),
   startedAt: zod.coerce.date(),
   endedAt: zod.coerce.date().nullish(),
-  status: zod.enum(["active", "completed"]),
+  status: zod.enum(["generating", "active", "completed", "failed"]),
 });
 export const GetAnalyticsHistoryResponse = zod.array(
   GetAnalyticsHistoryResponseItem,
 );
 
 /**
- * @summary List all available questions
+ * @summary List the user's interview study plans
  */
-export const ListQuestionsQueryParams = zod.object({
-  category: zod.coerce.string().optional(),
+export const ListInterviewPlansResponseItem = zod.object({
+  id: zod.string(),
+  companyName: zod.string().nullish(),
+  jobRole: zod.string(),
+  experienceLevel: zod.string(),
+  interviewRounds: zod.number(),
+  candidateSummary: zod.string(),
+  roleSummary: zod.string(),
+  researchSummary: zod.string(),
+  rounds: zod.array(
+    zod.object({
+      name: zod.string(),
+      purpose: zod.string(),
+      focusAreas: zod.array(zod.string()),
+      estimatedDays: zod.number(),
+    }),
+  ),
+  schedule: zod.array(
+    zod.object({
+      day: zod.number(),
+      title: zod.string(),
+      tasks: zod.array(zod.string()),
+    }),
+  ),
+  sources: zod.array(
+    zod.object({
+      title: zod.string(),
+      url: zod.string(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});
+export const ListInterviewPlansResponse = zod.array(
+  ListInterviewPlansResponseItem,
+);
+
+/**
+ * @summary Generate a personalized interview study plan
+ */
+export const createInterviewPlanBodyOneJobRoleMin = 2;
+export const createInterviewPlanBodyOneJobRoleMax = 120;
+
+export const createInterviewPlanBodyOneCompanyNameMax = 120;
+
+export const createInterviewPlanBodyOneQuestionCountMax = 10;
+
+export const createInterviewPlanBodyOneInterviewRoundsMax = 8;
+
+export const createInterviewPlanBodyOneRoundDetailsMax = 5000;
+
+export const createInterviewPlanBodyOneJobDescriptionMax = 30000;
+
+export const createInterviewPlanBodyOneJobDescriptionFileFilenameMax = 255;
+
+export const createInterviewPlanBodyOneResumeFileFilenameMax = 255;
+
+export const CreateInterviewPlanBody = zod.object({
+  jobRole: zod
+    .string()
+    .min(createInterviewPlanBodyOneJobRoleMin)
+    .max(createInterviewPlanBodyOneJobRoleMax),
+  companyName: zod
+    .string()
+    .max(createInterviewPlanBodyOneCompanyNameMax)
+    .optional(),
+  difficulty: zod.enum(["easy", "medium", "hard"]),
+  experienceLevel: zod.enum(["entry", "mid", "senior", "lead"]),
+  questionCount: zod
+    .number()
+    .min(1)
+    .max(createInterviewPlanBodyOneQuestionCountMax)
+    .optional(),
+  interviewRounds: zod
+    .number()
+    .min(1)
+    .max(createInterviewPlanBodyOneInterviewRoundsMax),
+  roundDetails: zod
+    .string()
+    .max(createInterviewPlanBodyOneRoundDetailsMax)
+    .optional(),
+  jobDescription: zod
+    .string()
+    .max(createInterviewPlanBodyOneJobDescriptionMax)
+    .optional(),
+  jobDescriptionFile: zod
+    .object({
+      filename: zod
+        .string()
+        .max(createInterviewPlanBodyOneJobDescriptionFileFilenameMax),
+      mimeType: zod.string(),
+      base64: zod.string(),
+    })
+    .optional(),
+  resumeFile: zod
+    .object({
+      filename: zod
+        .string()
+        .max(createInterviewPlanBodyOneResumeFileFilenameMax),
+      mimeType: zod.string(),
+      base64: zod.string(),
+    })
+    .optional(),
 });
 
-export const ListQuestionsResponseItem = zod.object({
-  id: zod.string(),
-  content: zod.string(),
-  category: zod.string(),
-  difficulty: zod.enum(["easy", "medium", "hard"]),
+export const GetInterviewPlanParams = zod.object({
+  id: zod.coerce.string(),
 });
-export const ListQuestionsResponse = zod.array(ListQuestionsResponseItem);
+
+export const GetInterviewPlanResponse = zod.object({
+  id: zod.string(),
+  companyName: zod.string().nullish(),
+  jobRole: zod.string(),
+  experienceLevel: zod.string(),
+  interviewRounds: zod.number(),
+  candidateSummary: zod.string(),
+  roleSummary: zod.string(),
+  researchSummary: zod.string(),
+  rounds: zod.array(
+    zod.object({
+      name: zod.string(),
+      purpose: zod.string(),
+      focusAreas: zod.array(zod.string()),
+      estimatedDays: zod.number(),
+    }),
+  ),
+  schedule: zod.array(
+    zod.object({
+      day: zod.number(),
+      title: zod.string(),
+      tasks: zod.array(zod.string()),
+    }),
+  ),
+  sources: zod.array(
+    zod.object({
+      title: zod.string(),
+      url: zod.string(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});

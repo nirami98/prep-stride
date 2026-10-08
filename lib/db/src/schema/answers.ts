@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { interviewSessionsTable } from "./interviewSessions";
@@ -16,7 +16,12 @@ export const answersTable = pgTable("answers", {
     .references(() => questionsTable.id),
   response: text("response").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("answers_session_question_unique").on(
+    table.sessionId,
+    table.questionId,
+  ),
+]);
 
 export const insertAnswerSchema = createInsertSchema(answersTable).omit({
   id: true,

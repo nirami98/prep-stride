@@ -14,15 +14,16 @@ import StartInterviewPage from "@/pages/start-interview";
 import InterviewSessionPage from "@/pages/interview-session";
 import InterviewResultPage from "@/pages/interview-result";
 import ComparePage from "@/pages/compare";
+import PlansPage from "@/pages/plans";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const configuredClerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const clerkPubKey = clerkProxyUrl
+  ? publishableKeyFromHost(window.location.hostname, configuredClerkPubKey)
+  : configuredClerkPubKey;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function stripBase(path: string): string {
@@ -178,6 +179,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/compare">
               <ProtectedRoute component={ComparePage} />
+            </Route>
+            <Route path="/plans">
+              <ProtectedRoute component={PlansPage} />
             </Route>
             <Route component={NotFound} />
           </Switch>

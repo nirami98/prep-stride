@@ -9,6 +9,16 @@ export interface HealthStatus {
   status: string;
 }
 
+export type InterviewSessionExperienceLevel =
+  (typeof InterviewSessionExperienceLevel)[keyof typeof InterviewSessionExperienceLevel];
+
+export const InterviewSessionExperienceLevel = {
+  entry: "entry",
+  mid: "mid",
+  senior: "senior",
+  lead: "lead",
+} as const;
+
 export type InterviewSessionDifficulty =
   (typeof InterviewSessionDifficulty)[keyof typeof InterviewSessionDifficulty];
 
@@ -22,14 +32,20 @@ export type InterviewSessionStatus =
   (typeof InterviewSessionStatus)[keyof typeof InterviewSessionStatus];
 
 export const InterviewSessionStatus = {
+  generating: "generating",
   active: "active",
   completed: "completed",
+  failed: "failed",
 } as const;
 
 export interface InterviewSession {
   id: string;
   userId: string;
   jobRole: string;
+  companyName?: string | null;
+  experienceLevel: InterviewSessionExperienceLevel;
+  interviewRounds: number;
+  roundDetails?: string | null;
   difficulty: InterviewSessionDifficulty;
   status: InterviewSessionStatus;
   questionCount: number;
@@ -51,6 +67,8 @@ export interface Question {
   id: string;
   content: string;
   category: string;
+  roundName: string;
+  sequence: number;
   difficulty: QuestionDifficulty;
 }
 
@@ -59,8 +77,62 @@ export interface Answer {
   sessionId: string;
   questionId: string;
   question?: Question | null;
+  /**
+   * @minLength 1
+   * @maxLength 12000
+   */
   response: string;
   createdAt: string;
+}
+
+export interface CategoryScore {
+  category: string;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  score: number;
+}
+
+export interface DimensionScores {
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  relevance: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  accuracy: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  depth: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  structure: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  communication: number;
+}
+
+export interface AnswerScore {
+  questionId: string;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  score: number;
+  evidence: string[];
+  missedSignals: string[];
+  improvedAnswer: string;
+  dimensionScores: DimensionScores;
 }
 
 export interface Feedback {
@@ -74,6 +146,9 @@ export interface Feedback {
   strengths: string[];
   weaknesses: string[];
   suggestions: string[];
+  categoryScores: CategoryScore[];
+  answerBreakdown: AnswerScore[];
+  methodology: string;
   summary: string;
   createdAt: string;
 }
@@ -92,15 +167,52 @@ export const CreateInterviewBodyDifficulty = {
   hard: "hard",
 } as const;
 
+export type CreateInterviewBodyExperienceLevel =
+  (typeof CreateInterviewBodyExperienceLevel)[keyof typeof CreateInterviewBodyExperienceLevel];
+
+export const CreateInterviewBodyExperienceLevel = {
+  entry: "entry",
+  mid: "mid",
+  senior: "senior",
+  lead: "lead",
+} as const;
+
+export interface DocumentUpload {
+  /** @maxLength 255 */
+  filename: string;
+  mimeType: string;
+  base64: string;
+}
+
 export interface CreateInterviewBody {
+  /**
+   * @minLength 2
+   * @maxLength 120
+   */
   jobRole: string;
+  /** @maxLength 120 */
+  companyName?: string;
   difficulty: CreateInterviewBodyDifficulty;
+  experienceLevel: CreateInterviewBodyExperienceLevel;
   /**
    * @minimum 1
    * @maximum 10
    */
   questionCount?: number;
+  /**
+   * @minimum 1
+   * @maximum 8
+   */
+  interviewRounds: number;
+  /** @maxLength 5000 */
+  roundDetails?: string;
+  /** @maxLength 30000 */
+  jobDescription?: string;
+  jobDescriptionFile?: DocumentUpload;
+  resumeFile?: DocumentUpload;
 }
+
+export type PlanRequestBody = CreateInterviewBody;
 
 export interface SubmitAnswerBody {
   questionId: string;
@@ -108,12 +220,46 @@ export interface SubmitAnswerBody {
 }
 
 export interface TranscribeAnswerBody {
+  /** @maxLength 14000000 */
   audioBase64: string;
   mimeType: string;
 }
 
 export interface TranscriptionResult {
   transcript: string;
+}
+
+export interface PlanRound {
+  name: string;
+  purpose: string;
+  focusAreas: string[];
+  estimatedDays: number;
+}
+
+export interface PlanDay {
+  day: number;
+  title: string;
+  tasks: string[];
+}
+
+export interface PlanSource {
+  title: string;
+  url: string;
+}
+
+export interface InterviewPlan {
+  id: string;
+  companyName?: string | null;
+  jobRole: string;
+  experienceLevel: string;
+  interviewRounds: number;
+  candidateSummary: string;
+  roleSummary: string;
+  researchSummary: string;
+  rounds: PlanRound[];
+  schedule: PlanDay[];
+  sources: PlanSource[];
+  createdAt: string;
 }
 
 export type AnalyticsOverviewScoresByDifficulty = {
@@ -135,8 +281,10 @@ export type HistoryItemStatus =
   (typeof HistoryItemStatus)[keyof typeof HistoryItemStatus];
 
 export const HistoryItemStatus = {
+  generating: "generating",
   active: "active",
   completed: "completed",
+  failed: "failed",
 } as const;
 
 export interface HistoryItem {
@@ -159,7 +307,3 @@ export interface AnalyticsOverview {
   recentActivity: HistoryItem[];
   scoresByDifficulty: AnalyticsOverviewScoresByDifficulty;
 }
-
-export type ListQuestionsParams = {
-  category?: string;
-};

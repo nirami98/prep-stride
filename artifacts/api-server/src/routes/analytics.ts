@@ -4,7 +4,7 @@ import {
   interviewSessionsTable,
   feedbackTable,
 } from "@workspace/db";
-import { eq, avg, count, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 
 const router = Router();
@@ -59,6 +59,24 @@ router.get("/overview", requireAuth, async (req: any, res: any) => {
         ? arr.reduce((sum, s) => sum + (s.score ?? 0), 0) / arr.length
         : null;
 
+    const sessionIds = sessions.map((session) => session.id);
+    const feedbackRows = sessionIds.length
+      ? await db.select({ categoryScores: feedbackTable.categoryScores }).from(feedbackTable)
+        .where(inArray(feedbackTable.sessionId, sessionIds))
+      : [];
+    const categoryTotals = new Map<string, { total: number; count: number }>();
+    for (const row of feedbackRows) {
+      try {
+        for (const item of JSON.parse(row.categoryScores) as Array<{ category: string; score: number }>) {
+          const current = categoryTotals.get(item.category) ?? { total: 0, count: 0 };
+          categoryTotals.set(item.category, { total: current.total + item.score, count: current.count + 1 });
+        }
+      } catch { /* Ignore malformed legacy feedback. */ }
+    }
+    const topCategory = [...categoryTotals.entries()]
+      .map(([category, value]) => ({ category, score: value.total / value.count }))
+      .sort((a, b) => b.score - a.score)[0]?.category ?? null;
+
     const recentActivity = sessions.slice(0, 5).map((s) => ({
       id: s.id,
       jobRole: s.jobRole,
@@ -75,7 +93,7 @@ router.get("/overview", requireAuth, async (req: any, res: any) => {
       completedSessions,
       averageScore,
       bestScore,
-      topCategory: null,
+      topCategory,
       recentActivity,
       scoresByDifficulty: {
         easy: avgByDifficulty(easyScores),

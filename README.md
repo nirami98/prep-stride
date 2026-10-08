@@ -2,31 +2,31 @@
 
 PrepStride is an AI-assisted interview preparation platform for practicing mock interviews, reviewing answers, and tracking progress over time.
 
-The current repository contains the first working prototype. Users can authenticate, configure an interview, answer questions by text or voice, receive AI-generated feedback, review previous sessions, and compare results.
+The current repository contains the phase-one application. Users can authenticate, create a personalized interview from a role, company, resume, and job description, answer by text or voice, receive rubric-based feedback, generate study plans, review history, and compare results.
 
 ## Current features
 
 - Clerk-based authentication
-- Configurable job role, difficulty, and question count
+- Configurable role, company, experience, difficulty, question count, and interview rounds
+- Optional resume and job-description uploads (PDF, DOC, DOCX, TXT, or MD; 10 MB maximum)
+- Fresh session-specific questions generated at runtime—no static question bank
 - Text and microphone-based answers
 - OpenAI-powered audio transcription
-- AI-generated score, summary, strengths, weaknesses, and suggestions
+- Evidence-based, question-specific rubrics with competency and per-answer scores
+- Interview study-plan corner with daily roadmaps and saved plans
+- Optional web research with source links when a company's round details are unknown
 - Interview history and performance dashboard
 - Side-by-side session comparison
 - Responsive React interface
 
-## Product direction
+## Next product direction
 
 PrepStride is being developed into a personalized interview coach. Planned work includes:
 
-- Resume and job-description uploads
-- Dynamic questions based on the role, company, resume, and job description
-- Evidence-based scoring with question-specific rubrics
-- Company interview-round research with cited web sources
-- Custom interview and study plans
-- Per-answer feedback and improved example answers
 - Real-time conversational voice interviews
-- More detailed competency and progress analytics
+- Background AI jobs, streaming generation, and stronger retry/recovery behavior
+- Evaluation datasets for measuring scoring consistency
+- More detailed longitudinal competency analytics
 
 ## Architecture
 
@@ -78,6 +78,12 @@ corepack enable
 pnpm install
 ```
 
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
 ## Environment variables
 
 The API requires:
@@ -88,9 +94,11 @@ CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 AI_INTEGRATIONS_OPENAI_BASE_URL=https://api.openai.com/v1
 AI_INTEGRATIONS_OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-5.5
+ALLOWED_ORIGINS=http://localhost:25978
 ```
 
-The web application requires:
+The same root `.env` file also supplies the web build with:
 
 ```bash
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -103,23 +111,23 @@ Never commit real credentials or local environment files.
 Push the current Drizzle schema to a development database:
 
 ```bash
-pnpm --filter @workspace/db run push
+pnpm run db:push
 ```
 
-The prototype expects interview questions in the `questions` table. A repeatable seed command is part of the upcoming local-development work and is not yet included in this initial snapshot.
+The generated baseline migration is in `lib/db/drizzle`. Questions do not need seeding; each interview creates its own generated question set.
 
 ## Development
 
 Start the API server:
 
 ```bash
-PORT=8080 pnpm --filter @workspace/api-server run dev
+pnpm run dev:api
 ```
 
 Start the web application in another terminal:
 
 ```bash
-PORT=25978 BASE_PATH=/ pnpm --filter @workspace/interview-simulator run dev
+pnpm run dev:web
 ```
 
 The API health check is available at:
@@ -128,9 +136,7 @@ The API health check is available at:
 http://localhost:8080/api/healthz
 ```
 
-### Current local-development note
-
-The initial prototype was configured for Replit, which routes `/api` requests to the API service automatically. A standalone local environment currently needs an equivalent reverse proxy from the Vite server to `http://localhost:8080`. Adding that proxy and a unified root development command is part of the first stabilization milestone.
+Open `http://localhost:25978`. Vite proxies `/api` to `http://localhost:8080` by default; change `API_ORIGIN` if the API uses another address.
 
 ## Useful commands
 
@@ -145,21 +151,22 @@ pnpm run build
 pnpm --filter @workspace/api-spec run codegen
 
 # Push schema changes to the development database
-pnpm --filter @workspace/db run push
+pnpm run db:push
+
+# Run automated tests
+pnpm test
 ```
 
-## Current prototype limitations
+## Current limitations
 
-- Questions currently come from a database-backed question bank rather than being generated for each role.
-- The repository does not yet contain repeatable migrations or question seed data.
 - Voice answers are uploaded after recording; voice interaction is not yet streamed in real time.
-- Scoring is generated once at the end of a session and needs stronger rubric validation.
-- Automated tests, production rate limiting, and background AI jobs are not yet implemented.
-- The standalone local proxy and one-command development workflow still need to be added.
+- Scoring is generated once at the end of a session; it is rubric-based but should be calibrated against a human-scored evaluation dataset before high-stakes use.
+- AI generation runs in the request lifecycle rather than a background job queue.
+- Rate limiting is in-memory and should be replaced with a shared store such as Redis when running multiple API instances.
+- Uploaded originals are not persisted by PrepStride, but they are sent to the configured OpenAI endpoint for generation.
 
 These limitations describe the initial baseline and are the focus of the next development phase.
 
 ## Repository
 
 GitHub: [nirami98/prep-stride](https://github.com/nirami98/prep-stride)
-
